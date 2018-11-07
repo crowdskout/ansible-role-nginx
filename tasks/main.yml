@@ -15,30 +15,40 @@
   when: nginx_official_repo == True
   tags: [packages, nginx]
 
-- include_tasks: installation.packages.yml
+- name: Include brotli library installation
+  import_tasks: brotli.yml
+  when: nginx_with_brotli
+  tags: "nginx:brotli"
+
+- name: Insclude package installation
+  include_tasks: installation.packages.yml
   when: nginx_installation_type == "packages"
   tags: [packages, nginx]
 
+- name: Include openresty isntallation
+  include_tasks: installation.openresty.yml
+  when: nginx_installation_type == "openresty" #and nginx_exist.stat.exists == false
+
 - import_tasks: ensure-dirs.yml
-  tags: [configuration, nginx]
+  tags: [config, nginx]
 
 - include_tasks: remove-defaults.yml
   when: not nginx_keep_only_specified
-  tags: [configuration, nginx]
+  tags: [config, nginx]
 
 - include_tasks: remove-extras.yml
   when: nginx_keep_only_specified
-  tags: [configuration, nginx]
+  tags: [config, nginx]
 
 - import_tasks: remove-unwanted.yml
-  tags: [configuration, nginx]
+  tags: [config, nginx]
 
 - import_tasks: configuration.yml
-  tags: [configuration, nginx]
+  tags: [config, nginx]
 
 - include_tasks: cloudflare_configuration.yml
   when: nginx_set_real_ip_from_cloudflare == True
-  tags: [configuration, nginx]
+  tags: [config, nginx]
 
 - include_tasks: amplify.yml
   when: nginx_amplify == true and (ansible_distribution in ['RedHat', 'CentOS', 'Debian', 'Amazon', 'Ubuntu'])

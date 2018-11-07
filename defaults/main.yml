@@ -73,9 +73,27 @@ nginx_start_service: true
 # Set wether enable Nginx service on boot or not
 nginx_start_at_boot: true
 
-nginx_set_real_ip_from_cloudflare: False
-nginx_cloudflare_real_ip_header: "CF-Connecting-IP" # See: https://support.cloudflare.com/hc/en-us/articles/200170706-How-do-I-restore-original-visitor-IP-with-Nginx-
-nginx_cloudflare_configuration_name: "cloudflare" # Name for the conf file in the conf.d directory
+nginx_force_install: False
+
+nginx_openresty_version: 1.13.6.1
+nginx_with_precre_jit: true
+nginx_with_luajit: true
+nginx_with_dav: false
+nginx_with_flv: false
+nginx_with_geoip: true
+nginx_with_gzip_static: true
+nginx_with_image_filter: false
+nginx_with_realip: true
+nginx_with_stub_status: true
+nginx_with_ssl: true
+nginx_with_sub: true
+nginx_with_xslt: true
+nginx_with_ipv6: true
+nginx_with_mail: false
+nginx_with_mail_ssl: false
+nginx_with_secure_link: true
+nginx_with_http2: true
+nginx_with_stream: true
 
 nginx_amplify: false
 nginx_amplify_api_key: ""

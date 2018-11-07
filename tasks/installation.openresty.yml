@@ -1,0 +1,111 @@
+---
+
+- name: Ensure yum version of nginx is not installed if using openresty
+  yum: name=nginx state=absent
+
+- stat: path=/usr/sbin/nginx
+  register: nginx_exist
+
+- shell: nginx -v 2>&1  | cut -d'/' -f2
+  when: nginx_exist.stat.exists == True
+  register: nginx_version_out
+
+- debug: var=nginx_version_out
+
+- stat: path=/opt/openresty.tar.gz
+  register: resty_tar
+
+- group: name=nginx state=present
+
+- user:
+    name: nginx
+    groups: nginx
+    append: no
+    shell: /sbin/nologin
+    home: /var/cache/nginx
+    createhome: yes
+    state: present
+
+
+- name: Install required packages to compile Openresty from source
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - wget
+    - perl
+    - readline-devel
+    - pcre-devel
+    - openssl-devel
+    - gcc
+    - make
+    - libxslt-devel
+    - geoip
+    - geoip-devel
+    - python-devel
+
+
+- block:
+  - name: Download Openresty source
+    get_url: url="http://openresty.org/download/openresty-{{ nginx_openresty_version }}.tar.gz" dest=/opt/openresty.tar.gz mode=0440
+    when: resty_tar.stat.exists == False
+
+  - name: Extract Openresty tarball
+    unarchive: src="/opt/openresty.tar.gz" dest=/opt/ copy=no
+    when: resty_tar.stat.exists == False
+
+  - stat: path="/opt/openresty-{{ nginx_openresty_version }}"
+    register: resty_extracted_dir
+
+  - name: Build configure command
+    template: src=configure_command.j2 dest="/opt/openresty-{{ nginx_openresty_version }}/ansible_build.sh" mode=0777
+    register: nginx_configure_command_output
+    when: resty_extracted_dir.stat.exists == True
+
+  - name: Configure Openresty
+    command: chdir="/opt/openresty-{{ nginx_openresty_version }}" ./ansible_build.sh
+    when: nginx_configure_command_output|changed or nginx_exist.stat.exists == false
+    no_log: True
+
+  - name: Compile Openresty
+    command: chdir="/opt/openresty-{{ nginx_openresty_version }}" make
+    when: nginx_configure_command_output|changed or nginx_exist.stat.exists == false
+    no_log: True
+
+  - name: Install Openresty
+    command: chdir="/opt/openresty-{{ nginx_openresty_version }}" make install
+    when: nginx_exist.stat.exists == false or nginx_configure_command_output|changed
+    notify:
+      - reload systemd
+      - restart nginx
+
+  when: nginx_exist.stat.exists == False or nginx_version_out.stdout | version_compare( nginx_openresty_version , "!=") or nginx_force_install
+
+
+
+- name: Deploy systemd script
+  template:
+    src: nginx_systemd.j2
+    dest: /usr/lib/systemd/system/nginx.service
+  register: nginx_systemd
+  notify:
+    - reload systemd
+    - restart nginx
+
+
+- name: Ensure tmp files are cleaned up
+  file:
+     path: "/opt/openresty-{{ nginx_openresty_version }}"
+     state: absent
+  tags: "nginx:cleanup"
+
+
+- name: Ensure tmp files are cleaned up
+  file:
+      path: /opt/openresty.tar.gz
+      state: absent
+  tags: "nginx:cleanup"
+
+- name: reload systemd
+  command: /usr/bin/systemctl --system daemon-reload
+  when: nginx_systemd|changed

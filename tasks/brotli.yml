@@ -1,0 +1,86 @@
+
+#(reverse-i-search)`curl': sudo curl -sL -o /etc/yum.repos.d/hnakamur-brotli.repo https://copr.fedoraproject.org/coprs/hnakamur/brotli/repo/epel-7/hnakamur-brotli-epel-7.repo
+#sudo yum install brotli
+
+- name: Install brotli
+  command: curl -sL -o /etc/yum.repos.d/hnakamur-brotli.repo https://copr.fedoraproject.org/coprs/hnakamur/brotli/repo/epel-7/hnakamur-brotli-epel-7.repo
+
+
+- name: Install brotli
+  yum: name=brotli state=present
+
+# install brotli itself
+- name: git checkout brotli
+  git:
+    repo: https://github.com/google/brotli.git
+    dest: /opt/brotli
+    version: "v1.0.4"
+    accept_hostkey: yes
+    force: yes
+    ssh_opts: "-o StrictHostKeyChecking=no"
+  register: nginx_brotli_changed
+
+- block:
+   - name: install brotli
+     command: chdir="/opt/brotli"  python setup.py install
+  when: nginx_brotli_changed|changed
+
+
+
+# libbrotli is needed for ngx_brotli
+- yum:
+    name: "{{item}}"
+    state: present
+  with_items:
+    - libtool
+    - autoconf
+    - automake
+    - gcc-c++.x86_64
+
+- name: git checkout libbrotli
+  git:
+    repo: https://github.com/bagder/libbrotli.git
+    dest: /opt/libbrotli
+#    version: libbrotli-1.0
+#    accept_hostkey: yes
+    version: master
+    force: yes
+#    ssh_opts: "-o StrictHostKeyChecking=no"
+  register: nginx_libbrotli_changed
+
+- block:
+    - name: autogen
+      shell: chdir="/opt/libbrotli"  ./autogen.sh
+
+
+    - name: configure libbrotli
+      command: chdir="/opt/libbrotli"  ./configure
+
+
+    - name: make libbrotli
+      command: chdir="/opt/libbrotli"  make
+
+
+    - name: install libbrotli
+      command: chdir="/opt/libbrotli"  make install
+
+
+    - name: Ensure libraries are loaded
+      template: src=nginx_ld_conf.j2
+        dest=/etc/ld.so.conf.d/nginx-lib.conf
+
+    - name: Run ldconfig
+      command: ldconfig
+  when: nginx_libbrotli_changed | changed or nginx_force_install
+
+
+
+#nginx brotli allows for static serving of brotli files
+- name: Install ngx_brotli
+  git:
+    repo: https://github.com/eustas/ngx_brotli
+    dest: /opt/ngx_brotli
+    version: master
+    accept_hostkey: yes
+    force: yes
+    ssh_opts: "-o StrictHostKeyChecking=no"
