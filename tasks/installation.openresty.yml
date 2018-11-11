@@ -64,17 +64,17 @@
 
   - name: Configure Openresty
     command: chdir="/opt/openresty-{{ nginx_openresty_version }}" ./ansible_build.sh
-    when: nginx_configure_command_output|changed or nginx_exist.stat.exists == false
+    when: nginx_configure_command_output is changed or nginx_exist.stat.exists == false
     no_log: True
 
   - name: Compile Openresty
     command: chdir="/opt/openresty-{{ nginx_openresty_version }}" make
-    when: nginx_configure_command_output|changed or nginx_exist.stat.exists == false
+    when: nginx_configure_command_output is changed or nginx_exist.stat.exists == false
     no_log: True
 
   - name: Install Openresty
     command: chdir="/opt/openresty-{{ nginx_openresty_version }}" make install
-    when: nginx_exist.stat.exists == false or nginx_configure_command_output|changed
+    when: nginx_exist.stat.exists == false or nginx_configure_command_output is changed
     notify:
       - reload systemd
       - restart nginx
@@ -108,4 +108,4 @@
 
 - name: reload systemd
   command: /usr/bin/systemctl --system daemon-reload
-  when: nginx_systemd|changed
+  when: nginx_systemd is changed

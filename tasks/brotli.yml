@@ -7,14 +7,14 @@
 
 
 - name: Install brotli
-  yum: name=brotli state=present
+  yum: name=brotli state=latest
 
 # install brotli itself
 - name: git checkout brotli
   git:
     repo: https://github.com/google/brotli.git
     dest: /opt/brotli
-    version: "v1.0.4"
+    version: "v1.0.7"
     accept_hostkey: yes
     force: yes
     ssh_opts: "-o StrictHostKeyChecking=no"
@@ -23,7 +23,7 @@
 - block:
    - name: install brotli
      command: chdir="/opt/brotli"  python setup.py install
-  when: nginx_brotli_changed|changed
+  when: nginx_brotli_changed is changed
 
 
 
@@ -66,12 +66,13 @@
 
 
     - name: Ensure libraries are loaded
-      template: src=nginx_ld_conf.j2
-        dest=/etc/ld.so.conf.d/nginx-lib.conf
+      template:
+        src: nginx_ld_conf.j2
+        dest: /etc/ld.so.conf.d/nginx-lib.conf
 
     - name: Run ldconfig
       command: ldconfig
-  when: nginx_libbrotli_changed | changed or nginx_force_install
+  when: nginx_libbrotli_changed is changed or nginx_force_install
 
 
 
