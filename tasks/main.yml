@@ -7,9 +7,9 @@
   when: nginx_load_default_vars
   tags: [always]
 
-- include_tasks: selinux.yml
-  when: ansible_selinux and ansible_selinux.status == "enabled"
-  tags: [packages, selinux, nginx]
+#- include_tasks: selinux.yml
+#  when: ansible_selinux and ansible_selinux.status == "enabled"
+#  tags: [packages, selinux, nginx]
 
 - include_tasks: nginx-official-repo.yml
   when: nginx_official_repo == True
