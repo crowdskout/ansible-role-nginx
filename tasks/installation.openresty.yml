@@ -1,5 +1,7 @@
 ---
 
+- yum: name="@Development tools" state=present
+  
 - name: Ensure yum version of nginx is not installed if using openresty
   yum: name=nginx state=absent
 
